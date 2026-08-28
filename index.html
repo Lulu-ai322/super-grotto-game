@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Super Grotto Escape</title>
+  <style>
+    html, body { margin: 0; padding: 0; background: #0b0f1a; height: 100%; overflow: hidden; }
+    #game { display: flex; justify-content: center; align-items: center; height: 100vh; }
+    canvas { image-rendering: pixelated; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+    #hint { position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+            color: #9fb3c8; font-family: monospace; font-size: 12px; opacity: 0.7; text-align: center; }
+    body.touch #hint { display: none; }
+    #rotate { position: fixed; inset: 0; background: #0b0f1a; color: #7CFFB2;
+              display: none; align-items: center; justify-content: center;
+              font-family: monospace; font-size: 20px; text-align: center; z-index: 9998; padding: 24px; }
+    body.portrait #rotate { display: flex; }
+    #err { position: fixed; left: 0; right: 0; bottom: 0; max-height: 45%; overflow: auto;
+           background: #2a0d12; color: #ff9aa2; font-family: monospace; font-size: 12px;
+           padding: 10px 14px; z-index: 10000; display: none; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <div id="hint">Move: ← → / A D &nbsp;|&nbsp; Jump: ↑ / W / Space &nbsp;|&nbsp; Shoot: X / J &nbsp;|&nbsp; Duck: ↓</div>
+  <div id="rotate"><div>Rotate your device to<br>landscape mode to play</div></div>
+  <div id="err"></div>
+  <script>
+    function chk() {
+      const touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+      document.body.classList.toggle("touch", touch);
+      document.body.classList.toggle("portrait", touch && window.innerHeight > window.innerWidth);
+    }
+    window.addEventListener("resize", chk);
+    window.addEventListener("orientationchange", chk);
+    window.addEventListener("error", (e) => {
+      const el = document.getElementById("err");
+      el.style.display = "block";
+      el.textContent = "ERROR: " + (e.error ? (e.error.stack || e.error.message) : e.message) + "\n@ " + e.filename + ":" + e.lineno;
+    });
+    window.addEventListener("unhandledrejection", (e) => {
+      const el = document.getElementById("err");
+      el.style.display = "block";
+      el.textContent = "PROMISE: " + (e.reason && (e.reason.stack || e.reason.message) || e.reason);
+    });
+    chk();
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
