@@ -343,7 +343,15 @@ class GameScene extends Phaser.Scene {
 
   buildBackgrounds() {
     const theme = this.cfg.theme || 0xffffff;
-    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x0b0f1a).setOrigin(0).setScrollFactor(0).setDepth(-100).setTint(theme);
+    // Rectangle has NO setTint (only Image/Sprite/Text/TileSprite do) — tint the sky
+    // by mixing the theme color into the dark base instead.
+    const mix = (a, b, t) => {
+      const ar = (a >> 16) & 255, ag = (a >> 8) & 255, ab = a & 255;
+      const br = (b >> 16) & 255, bg = (b >> 8) & 255, bb = b & 255;
+      return ((ar + (br - ar) * t) << 16 | (ag + (bg - ag) * t) << 8 | (ab + (bb - ab) * t)) | 0;
+    };
+    const sky = mix(0x0b0f1a, theme, 0.22);
+    this.add.rectangle(0, 0, GAME_W, GAME_H, sky).setOrigin(0).setScrollFactor(0).setDepth(-100);
     const mk = (key, scroll) => {
       const h = GAME_H;
       const ts = this.add.tileSprite(0, 0, GAME_W, h, key).setOrigin(0, 0).setScrollFactor(0).setDepth(-90).setTint(theme);
