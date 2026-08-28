@@ -134,29 +134,23 @@ class PreloadScene extends Phaser.Scene {
     this.load.audio("music", A + "audio/music.ogg");
 
     // ---- Loading screen UI ----
-    // Layered parallax sky
-    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x070b14).setOrigin(0);
-    this.add.tileSprite(0, 0, GAME_W, GAME_H, "back").setOrigin(0).setAlpha(0.5);
-    this.add.tileSprite(0, 0, GAME_W, GAME_H, "far").setOrigin(0).setAlpha(0.6);
-    this.add.tileSprite(0, GAME_H - 130, GAME_W, 130, "middle").setOrigin(0, 0).setAlpha(0.7);
-    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x000000, 0.16).setOrigin(0); // vignette
+    // NOTE: this runs inside preload(), so NO asset textures are available yet.
+    // Use only solid shapes + text here (texture sprites would throw "texture not found").
+    this.add.rectangle(0, 0, GAME_W, GAME_H, 0x0b0f1a).setOrigin(0);
 
-    // Glowing halo behind the mascot
-    const glow = this.add.image(GAME_W / 2, 250, "battery1").setScale(3).setAlpha(0.12);
-    this.tweens.add({ targets: glow, alpha: 0.28, duration: 900, yoyo: true, repeat: -1, ease: "Sine.inOut" });
+    // Pulsing ring (Graphics, no texture) behind the title
+    const halo = this.add.circle(GAME_W / 2, 250, 90, 0x7CFFB2, 0.06);
+    this.tweens.add({ targets: halo, scale: 1.15, alpha: 0.12, duration: 850, yoyo: true, repeat: -1, ease: "Sine.inOut" });
 
-    // Title with neon glow + subtitle
-    this.add.text(GAME_W / 2, 126, "SUPER GROTTO ESCAPE", {
+    // Title with neon glow + subtitle (text needs no texture)
+    this.add.text(GAME_W / 2, 120, "SUPER GROTTO ESCAPE", {
       fontFamily: "monospace", fontSize: "36px", color: "#7CFFB2", stroke: "#0a3a24", strokeThickness: 7,
     }).setOrigin(0.5).setShadow(0, 0, "#1fe07a", 18, true, true);
-    this.add.text(GAME_W / 2, 154, "loading the grotto...", { fontFamily: "monospace", fontSize: "12px", color: "#9fb3c8" }).setOrigin(0.5).setAlpha(0.8);
+    this.add.text(GAME_W / 2, 150, "loading the grotto...", { fontFamily: "monospace", fontSize: "12px", color: "#9fb3c8" }).setOrigin(0.5).setAlpha(0.8);
 
-    const mascot = this.add.sprite(GAME_W / 2, 250, "p-idle").setScale(2);
-    this.tweens.add({ targets: mascot, y: 236, duration: 600, yoyo: true, repeat: -1, ease: "Sine.inOut" });
-
-    // Progress panel
-    this.add.image(GAME_W / 2, 330, "ui-panel").setDisplaySize(392, 54);
-    const barBg = this.add.rectangle(GAME_W / 2, 330, 360, 22, 0x101824).setStrokeStyle(2, 0x33415c);
+    // Progress panel (solid shapes, no texture)
+    const barBg = this.add.rectangle(GAME_W / 2, 330, 392, 54, 0x101824).setStrokeStyle(2, 0x33415c);
+    this.add.rectangle(GAME_W / 2, 330, 360, 22, 0x101824).setStrokeStyle(2, 0x33415c);
     const barGlow = this.add.rectangle(GAME_W / 2 - 176, 330, 0, 16, 0x7CFFB2, 0.35).setOrigin(0, 0.5);
     const bar = this.add.rectangle(GAME_W / 2 - 176, 330, 0, 12, 0x7CFFB2).setOrigin(0, 0.5);
     const pct = this.add.text(GAME_W / 2, 372, "0%", { fontFamily: "monospace", fontSize: "15px", color: "#cdd9e5" }).setOrigin(0.5);
@@ -504,8 +498,11 @@ class GameScene extends Phaser.Scene {
   }
 
   startMusic() {
-    this.music = this.sound.add("music", { loop: true, volume: 0.5 });
-    this.music.play();
+    this.music = null;
+    try {
+      this.music = this.sound.add("music", { loop: true, volume: 0.5 });
+      this.music.play();
+    } catch (e) { this.music = null; } // never let a missing/corrupt audio file break the game
   }
 
   tryJump() {
@@ -674,7 +671,7 @@ class GameScene extends Phaser.Scene {
   startDeath() {
     if (this.gameOver) return;
     this.gameOver = true;
-    this.music.stop();
+    if (this.music) this.music.stop();
     this.cameras.main.shake(240, 0.02);
     const p = this.player;
     p.setVelocity(-p.facing * 120, -320);
@@ -715,7 +712,7 @@ class GameScene extends Phaser.Scene {
     if (this.won) return;
     this.won = true;
     this.physics.pause();
-    this.music.stop();
+    if (this.music) this.music.stop();
     this.cameras.main.flash(280, 90, 255, 170);
 
     const next = this.levelIndex + 1;
