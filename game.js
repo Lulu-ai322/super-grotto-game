@@ -643,7 +643,6 @@ class GameScene extends Phaser.Scene {
     bullet.destroy();
     const ex = enemy.x, ey = enemy.y, type = enemy.etype;
     const flip = enemy.flipX, sc = enemy.gfxScale || 1;
-    enemy.destroy();
     this.score += 100;
     this.updateHud();
     if (type === "demon" || type === "blood") {
@@ -651,8 +650,8 @@ class GameScene extends Phaser.Scene {
       const d = this.add.sprite(ex, ey, type + "-death").setDepth(20).setScale(sc).setFlipX(flip).play(type + "-death");
       this.time.delayedCall(420, () => d.destroy());
     } else {
+      if (enemy.body) enemy.body.enable = false;
       enemy.active = false;
-      enemy.body.enable = false;
       enemy.setDepth(20);
       this.tweens.add({ targets: enemy, scaleY: 0.2, alpha: 0, duration: 320, ease: "Quad.easeIn", onComplete: () => enemy.destroy() });
     }
