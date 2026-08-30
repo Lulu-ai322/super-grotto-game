@@ -118,6 +118,7 @@ class PreloadScene extends Phaser.Scene {
     // Kenney fantasy UI (only the pieces we use: solid panels)
     this.load.image("ui-panel",   A + "ui/panel.png");
     this.load.image("ui-panel2",  A + "ui/panel2.png");
+    this.load.image("ui-bar",     A + "ui/pixel-ui-05.png");
 
     // New creatures (Tiny RPG pack) — 100x100 frames
     this.load.spritesheet("demon-idle",    A + "enemies/demon-idle.png",    { frameWidth: 100, frameHeight: 100 });
@@ -310,6 +311,7 @@ class GameScene extends Phaser.Scene {
 
     this.score = 0;
     this.health = 3;
+    this.maxHealth = 3;
     this.invuln = 0;
     this.gameOver = false;
     this.won = false;
@@ -484,6 +486,10 @@ class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: b, y: b.y - 6, duration: 700, yoyo: true, repeat: -1, ease: "Sine.inOut" });
     }
 
+    // Max possible score for star rating (all enemies + all batteries)
+    this.maxScore = (this.cfg.count + (this.cfg.bat || 7) + (this.cfg.demon || 0) + (this.cfg.blood || 0)) * 100
+                 + (this.plats.length + 6) * 50;
+
     // Gate (goal)
     this.gate = this.physics.add.staticImage(this.gatePos.x, this.gatePos.y, "gate").setDepth(4);
     this.physics.add.overlap(this.player, this.gate, () => this.win(), null, this);
@@ -493,10 +499,21 @@ class GameScene extends Phaser.Scene {
     this.add.image(150, 26, "ui-panel").setDisplaySize(300, 40).setScrollFactor(0).setDepth(99);
     this.hud = this.add.text(16, 12, "", { fontFamily: "monospace", fontSize: "18px", color: "#e8f0fe" })
       .setScrollFactor(0).setDepth(100);
+    // Health bar (Pixel UI pack bar as track + colored fill)
+    this.hpW = 188; this.hpH = 14; this.hpX = 16; this.hpY = 36;
+    this.add.image(this.hpX + this.hpW / 2, this.hpY, "ui-bar")
+      .setDisplaySize(this.hpW, this.hpH).setScrollFactor(0).setDepth(100).setTint(0x2a3340);
+    this.hpFill = this.add.rectangle(this.hpX, this.hpY, this.hpW, this.hpH, 0x4be08a)
+      .setOrigin(0, 0.5).setScrollFactor(0).setDepth(101);
     this.updateHud();
   }
 
-  updateHud() { this.hud.setText(`SCORE ${this.score}   HEALTH ${"♥".repeat(this.health)}`); }
+  updateHud() {
+    this.hud.setText(`SCORE ${this.score}`);
+    const r = Phaser.Math.Clamp(this.health / this.maxHealth, 0, 1);
+    this.hpFill.setSize(this.hpW * r, this.hpH);
+    this.hpFill.setFillStyle(r > 0.5 ? 0x4be08a : r > 0.25 ? 0xe0c14b : 0xe04b4b);
+  }
 
   bindInput() {
     this.keys = this.input.keyboard.addKeys({
@@ -650,10 +667,10 @@ class GameScene extends Phaser.Scene {
       const d = this.add.sprite(ex, ey, type + "-death").setDepth(20).setScale(sc).setFlipX(flip).play(type + "-death");
       this.time.delayedCall(420, () => d.destroy());
     } else {
-      if (enemy.body) enemy.body.enable = false;
-      enemy.active = false;
-      enemy.setDepth(20);
-      this.tweens.add({ targets: enemy, scaleY: 0.2, alpha: 0, duration: 320, ease: "Quad.easeIn", onComplete: () => enemy.destroy() });
+      // Grotto enemies (slime/bat/skeleton) have no death anim — blow them up
+      enemy.destroy();
+      const d = this.add.sprite(ex, ey, "explosion").setDepth(20).setScale(1.1).play("explosion");
+      this.time.delayedCall(360, () => d.destroy());
     }
     this.floatScore(ex, ey - 20, 100);
   }
@@ -729,7 +746,11 @@ class GameScene extends Phaser.Scene {
     if (next < LEVELS.length) sub = `Score ${this.score}   —   N: Next Level   R: Replay   M: Menu`;
     else sub = `Score ${this.score}   —   ALL LEVELS CLEARED!   R: Replay   M: Menu`;
 
-    this.showBanner("YOU ESCAPED!", "#7CFFB2", sub);
+    // Star rating: full score -> 3 stars, scaled down otherwise
+    const ratio = this.maxScore > 0 ? this.score / this.maxScore : 1;
+    const stars = ratio >= 0.99 ? 3 : ratio >= 0.6 ? 2 : 1;
+
+    this.showBanner("YOU ESCAPED!", "#7CFFB2", sub, stars);
     this.input.keyboard.once("keydown-R", () => this.scene.start("game", { level: this.levelIndex }));
     this.input.keyboard.once("keydown-M", () => this.scene.start("menu"));
     if (next < LEVELS.length) this.input.keyboard.once("keydown-N", () => this.scene.start("game", { level: next }));
@@ -742,10 +763,15 @@ class GameScene extends Phaser.Scene {
     this.input.keyboard.once("keydown-M", () => this.scene.start("menu"));
   }
 
-  showBanner(title, color, sub) {
+  showBanner(title, color, sub, stars) {
     this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.6).setScrollFactor(0).setDepth(200);
     this.add.image(GAME_W / 2, GAME_H / 2, "ui-panel2").setDisplaySize(580, 200).setScrollFactor(0).setDepth(201);
     this.add.text(GAME_W / 2, GAME_H / 2 - 40, title, { fontFamily: "monospace", fontSize: "40px", color }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+    if (stars !== undefined) {
+      this.add.text(GAME_W / 2, GAME_H / 2 - 2,
+        "★".repeat(stars) + "☆".repeat(3 - stars),
+        { fontFamily: "monospace", fontSize: "34px", color: "#ffd86b" }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+    }
     this.add.text(GAME_W / 2, GAME_H / 2 + 28, sub, { fontFamily: "monospace", fontSize: "16px", color: "#e8f0fe" }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
     // Tappable buttons (so the game isn't a dead-end on touch devices)
