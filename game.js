@@ -768,9 +768,15 @@ class GameScene extends Phaser.Scene {
     this.add.image(GAME_W / 2, GAME_H / 2, "ui-panel2").setDisplaySize(580, 200).setScrollFactor(0).setDepth(201);
     this.add.text(GAME_W / 2, GAME_H / 2 - 40, title, { fontFamily: "monospace", fontSize: "40px", color }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
     if (stars !== undefined) {
-      this.add.text(GAME_W / 2, GAME_H / 2 - 2,
-        "★".repeat(stars) + "☆".repeat(3 - stars),
-        { fontFamily: "monospace", fontSize: "34px", color: "#ffd86b" }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+      // Each star sits on a Pixel UI pack panel medallion
+      const sy = GAME_H / 2 - 4, gap = 56;
+      for (let i = 0; i < 3; i++) {
+        const sx = GAME_W / 2 + (i - 1) * gap;
+        this.add.image(sx, sy, "ui-panel2").setDisplaySize(44, 44).setScrollFactor(0).setDepth(201);
+        this.add.text(sx, sy, i < stars ? "★" : "☆",
+          { fontFamily: "monospace", fontSize: "26px", color: i < stars ? "#ffd86b" : "#5b6470" })
+          .setOrigin(0.5).setScrollFactor(0).setDepth(202);
+      }
     }
     this.add.text(GAME_W / 2, GAME_H / 2 + 28, sub, { fontFamily: "monospace", fontSize: "16px", color: "#e8f0fe" }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
 
