@@ -17,6 +17,8 @@ const LEVELS = [
   { name: "6", speed: 1.7, count: 24, demon: 6, theme: 0xcf9dff },
   { name: "7", speed: 1.9, count: 26, demon: 5, blood: 5, theme: 0x9fd8ff },
   { name: "8", speed: 2.1, count: 30, demon: 7, blood: 6, theme: 0xffe08a },
+  { name: "9", speed: 2.4, count: 36, demon: 9, blood: 7, bat: 12, theme: 0xff7a6b },
+  { name: "10", speed: 1.0, count: 0, boss: true, theme: 0x4b2a68 },
 ];
 
 // Four distinct floating-platform layouts (32px units: [startCol,endCol,row]).
@@ -119,6 +121,14 @@ class PreloadScene extends Phaser.Scene {
     this.load.image("ui-panel",   A + "ui/panel.png");
     this.load.image("ui-panel2",  A + "ui/panel2.png");
     this.load.image("ui-bar",     A + "ui/pixel-ui-05.png");
+
+    // Minotaur boss (mino sprites, 288x160 frames) + its HP bar UI
+    for (let i = 1; i <= 16; i++) this.load.image("mino-idle-" + i, A + "enemies/mino-idle-" + i + ".png");
+    for (let i = 1; i <= 12; i++) this.load.image("mino-walk-" + i, A + "enemies/mino-walk-" + i + ".png");
+    for (let i = 1; i <= 16; i++) this.load.image("mino-atk-" + i,  A + "enemies/mino-atk-" + i + ".png");
+    this.load.image("boss-hp-under",    A + "ui/boss-hp-under.png");
+    this.load.image("boss-hp-progress", A + "ui/boss-hp-progress.png");
+    this.load.image("boss-hp-over",     A + "ui/boss-hp-over.png");
 
     // New creatures (Tiny RPG pack) — 100x100 frames
     this.load.spritesheet("demon-idle",    A + "enemies/demon-idle.png",    { frameWidth: 100, frameHeight: 100 });
@@ -283,7 +293,7 @@ class GameScene extends Phaser.Scene {
   }
 
   create() {
-    const COLS = 240, ROWS = 32; // 16px tiles -> 3840 x 512 world
+    const COLS = this.cfg.boss ? 110 : 240, ROWS = 32; // 16px tiles -> boss arena 1760px / normal 3840px
     this.levelW = COLS * TILE;
     this.levelH = ROWS * TILE;
     this.groundTop = (ROWS - 2) * TILE;
@@ -324,13 +334,23 @@ class GameScene extends Phaser.Scene {
     const ground = ROWS - 2;
     for (let x = 0; x < COLS; x++) { grid[ground][x] = GROUND_TILE; grid[ground + 1][x] = GROUND_TILE; }
 
-    // Floating platforms in 32px units -> convert to 16px tile units (varies per level)
-    const plats32 = PLAT_LAYOUTS[this.levelIndex % PLAT_LAYOUTS.length];
-    this.plats = [];
-    for (const [a, b, r] of plats32) {
-      const a2 = a * 2, b2 = b * 2, r2 = r * 2;
-      for (let x = a2; x <= b2; x++) grid[r2][x] = GROUND_TILE;
-      this.plats.push({ x: (a2 + b2) / 2 * TILE, y: (r2 - 1) * TILE });
+    if (this.cfg.boss) {
+      // Compact boss arena: flat ground + a few high platforms to dodge on
+      this.plats = [];
+      for (const [a, b, r] of [[6,10,12],[16,21,10],[28,32,12],[38,43,10],[46,50,12]]) {
+        const a2 = a * 2, b2 = b * 2, r2 = r * 2;
+        for (let x = a2; x <= b2; x++) grid[r2][x] = GROUND_TILE;
+        this.plats.push({ x: (a2 + b2) / 2 * TILE, y: (r2 - 1) * TILE });
+      }
+    } else {
+      // Floating platforms in 32px units -> convert to 16px tile units (varies per level)
+      const plats32 = PLAT_LAYOUTS[this.levelIndex % PLAT_LAYOUTS.length];
+      this.plats = [];
+      for (const [a, b, r] of plats32) {
+        const a2 = a * 2, b2 = b * 2, r2 = r * 2;
+        for (let x = a2; x <= b2; x++) grid[r2][x] = GROUND_TILE;
+        this.plats.push({ x: (a2 + b2) / 2 * TILE, y: (r2 - 1) * TILE });
+      }
     }
 
     const map = this.make.tilemap({ data: grid, tileWidth: TILE, tileHeight: TILE });
@@ -386,6 +406,14 @@ class GameScene extends Phaser.Scene {
   }
 
   createEnemyAnims() {
+    if (this.cfg.boss) {
+      // Minotaur boss frames are individual images
+      const seq = (n, k) => Array.from({ length: n }, (_, i) => ({ key: k + (i + 1) }));
+      this.anims.create({ key: "mino-idle", frames: seq(16, "mino-idle-"), frameRate: 6,  repeat: -1 });
+      this.anims.create({ key: "mino-walk", frames: seq(12, "mino-walk-"), frameRate: 7,  repeat: -1 });
+      this.anims.create({ key: "mino-atk",  frames: seq(16, "mino-atk-"),  frameRate: 12, repeat: 0 });
+      return;
+    }
     this.anims.create({ key: "slime",     frames: this.anims.generateFrameNumbers("slime",     { frames: [0,1,2,3,4] }), frameRate: 8,  repeat: -1 });
     this.anims.create({ key: "bat",       frames: this.anims.generateFrameNumbers("bat",       { frames: [0,1,2,3,4] }), frameRate: 8,  repeat: -1 });
     this.anims.create({ key: "skel-walk", frames: this.anims.generateFrameNumbers("skel-walk", { frames: [0,1,2,3,4,5,6,7] }), frameRate: 10, repeat: -1 });
@@ -418,6 +446,7 @@ class GameScene extends Phaser.Scene {
   }
 
   spawnEntities() {
+    if (this.cfg.boss) { this.spawnBoss(); return; }
     const sp = this.cfg.speed;
     const addSlime = (x, y) => {
       const e = this.enemies.create(x, y, "slime");
@@ -493,6 +522,67 @@ class GameScene extends Phaser.Scene {
     // Gate (goal)
     this.gate = this.physics.add.staticImage(this.gatePos.x, this.gatePos.y, "gate").setDepth(4);
     this.physics.add.overlap(this.player, this.gate, () => this.win(), null, this);
+  }
+
+  /* ------------------------- boss fight ------------------------- */
+  spawnBoss() {
+    const boss = this.enemies.create(this.levelW - 8 * TILE, this.groundTop - 70, "mino-idle-1");
+    boss.setScale(0.55);
+    boss.body.setSize(150, 130).setOffset(69, 26);
+    boss.setCollideWorldBounds(true);
+    boss.etype = "boss";
+    boss.dir = -1;
+    boss.speed = 62;
+    boss.bossMax = 30;
+    boss.bossHp = boss.bossMax;
+    boss.attackT = 0;
+    boss.setDepth(12);
+    this.boss = boss;
+    boss.play("mino-idle");
+
+    // Boss names the arena; no escape gate — defeat the minotaur to win
+    this.maxScore = boss.bossMax * 100 + 1000;
+    this.defeatedBoss = false;
+    this.buildBossHud();
+  }
+
+  buildBossHud() {
+    const s = 1.8;
+    const cx = GAME_W / 2, cy = 38;
+    this.add.image(cx, cy, "boss-hp-under").setScrollFactor(0).setDepth(150).setScale(s);
+    // Inner fill area (from boss-hp-under.png 160x64: bar spans x8..152, y23..32)
+    const uw = 160 * s, uh = 64 * s;
+    this.bossFillW = (152 - 8) * s;
+    this.bossFillH = (32 - 23) * s;
+    const fx = cx - uw / 2 + 8 * s;
+    const fy = cy - uh / 2 + (23 + (32 - 23) / 2) * s;
+    this.bossFill = this.add.rectangle(fx, fy, this.bossFillW, this.bossFillH, 0x6b3ff0)
+      .setOrigin(0, 0.5).setScrollFactor(0).setDepth(151);
+    this.add.image(cx, cy, "boss-hp-progress").setScrollFactor(0).setDepth(151).setScale(s);
+    this.add.image(cx, cy, "boss-hp-over").setScrollFactor(0).setDepth(152).setScale(s).setAlpha(0.9);
+    this.bossFill.setAlpha(0.35);
+    this.updateBossHud();
+  }
+
+  updateBossHud() {
+    const r = this.boss ? Phaser.Math.Clamp(this.boss.bossHp / this.boss.bossMax, 0, 1) : 1;
+    if (this.bossFill) this.bossFill.setSize(this.bossFillW * Math.max(0.001, r), this.bossFillH);
+  }
+
+  defeatBoss(boss) {
+    if (this.defeatedBoss) return;
+    this.defeatedBoss = true;
+    boss.destroy();
+    this.score += 1000;
+    this.updateHud();
+    this.cameras.main.shake(260, 0.015);
+    for (let i = 0; i < 5; i++) {
+      const d = this.add.sprite(boss.x, boss.y - 30 + i * 22, "explosion")
+        .setDepth(20).setScale(1.4 + i * 0.3).play("explosion");
+      this.time.delayedCall(360, () => d.destroy());
+    }
+    this.floatScore(boss.x, boss.y - 70, 1000);
+    this.time.delayedCall(650, () => this.win());
   }
 
   buildHud() {
@@ -632,6 +722,28 @@ class GameScene extends Phaser.Scene {
         e.y = e.baseY + Math.sin(e.t) * 40;
         e.setFlipX(e.dir > 0);
         if (e.x < 40 || e.x > this.levelW - 40) e.dir *= -1;
+      } else if (e.etype === "boss") {
+        if (this.defeatedBoss) { e.setVelocityX(0); }
+        if (e.attackT > 0) {
+          e.attackT -= delta;
+          e.setVelocityX(0);
+          if (e.attackT <= 0) e.play("mino-walk", true);
+        } else {
+          const p = this.player;
+          const near = p && Math.abs(p.x - e.x) < 130 && Math.abs(p.y - e.y) < 150 && p.y > this.groundTop - 140;
+          if (near) {
+            e.dir = p.x < e.x ? -1 : 1;
+            e.setFlipX(e.dir < 0);
+            e.setVelocityX(0);
+            e.play("mino-atk", true);
+            e.attackT = 520 + Math.random() * 220;
+          } else {
+            e.setVelocityX(e.dir * e.speed);
+            e.setFlipX(e.dir < 0);
+            if (e.body.blocked.left) e.dir = 1;
+            if (e.body.blocked.right) e.dir = -1;
+          }
+        }
       }
     });
 
@@ -662,6 +774,17 @@ class GameScene extends Phaser.Scene {
     const flip = enemy.flipX, sc = enemy.gfxScale || 1;
     this.score += 100;
     this.updateHud();
+    if (type === "boss") {
+      // Boss takes many hits — reduce HP, not a one-shot kill
+      enemy.bossHp -= 1;
+      this.updateBossHud();
+      this.floatScore(ex, ey - 20, 100);
+      enemy.setVelocity(enemy.dir > 0 ? -120 : 120, -60);
+      enemy.setTintFill(0xffffff);
+      this.time.delayedCall(90, () => { if (enemy.active) enemy.clearTint(); });
+      if (enemy.bossHp <= 0) this.defeatBoss(enemy);
+      return;
+    }
     if (type === "demon" || type === "blood") {
       enemy.destroy();
       const d = this.add.sprite(ex, ey, type + "-death").setDepth(20).setScale(sc).setFlipX(flip).play(type + "-death");
@@ -726,8 +849,9 @@ class GameScene extends Phaser.Scene {
   }
 
   showLevelIntro() {
-    const t = this.add.text(GAME_W / 2, GAME_H / 2 - 40, "LEVEL " + this.cfg.name, {
-      fontFamily: "monospace", fontSize: "48px", color: "#7CFFB2", stroke: "#0a3a24", strokeThickness: 6,
+    const label = this.cfg.boss ? "FINAL BOSS — MINOTAUR" : "LEVEL " + this.cfg.name;
+    const t = this.add.text(GAME_W / 2, GAME_H / 2 - 40, label, {
+      fontFamily: "monospace", fontSize: this.cfg.boss ? 34 : 48, color: "#ffd86b", stroke: "#0a3a24", strokeThickness: 6,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(180);
     this.tweens.add({ targets: t, alpha: 0, delay: 900, duration: 600, onComplete: () => t.destroy() });
   }
