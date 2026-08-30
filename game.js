@@ -122,6 +122,12 @@ class PreloadScene extends Phaser.Scene {
     this.load.image("ui-panel2",  A + "ui/panel2.png");
     this.load.image("ui-bar",     A + "ui/pixel-ui-05.png");
 
+    // Environment decorations (grotto Environment folder)
+    this.load.image("palm",       A + "env/palm.png");
+    this.load.image("plant",      A + "env/plant.png");
+    this.load.image("plant-big",  A + "env/plant-big.png");
+    for (let i = 1; i <= 5; i++) this.load.image("force-field-" + i, A + "env/force-field-" + i + ".png");
+
     // Minotaur boss assets are loaded by boss.js (separate file)
     this.preloadBoss();
 
@@ -300,6 +306,7 @@ class GameScene extends Phaser.Scene {
     this.createFxAnims();
     this.buildGroups();
     this.spawnEntities();
+    this.spawnEnvironment();
     this.buildHud();
     this.bindInput();
     this.touch = { left: false, right: false };
@@ -420,6 +427,10 @@ class GameScene extends Phaser.Scene {
     this.anims.create({ key: "explosion",  frames: this.anims.generateFrameNumbers("explosion",  { frames: [0,1,2,3] }), frameRate: 12, repeat: 0 });
     this.anims.create({ key: "pick",       frames: this.anims.generateFrameNumbers("pick",       { frames: [0,1,2,3,4,5,6] }), frameRate: 14, repeat: 0 });
     this.anims.create({ key: "bullet-fx",  frames: this.anims.generateFrameNumbers("bullet-fx",  { frames: [0,1,2,3] }), frameRate: 16, repeat: -1 });
+    this.anims.create({ key: "forcefield", frames: [
+      { key: "force-field-1" }, { key: "force-field-2" }, { key: "force-field-3" },
+      { key: "force-field-4" }, { key: "force-field-5" },
+    ], frameRate: 8, repeat: -1 });
   }
 
   buildGroups() {
@@ -510,6 +521,45 @@ class GameScene extends Phaser.Scene {
     // Gate (goal)
     this.gate = this.physics.add.staticImage(this.gatePos.x, this.gatePos.y, "gate").setDepth(4);
     this.physics.add.overlap(this.player, this.gate, () => this.win(), null, this);
+  }
+
+  /* -- Environment decoration (plants, palms, force fields) -- */
+  spawnEnvironment() {
+    if (this.cfg.boss) {
+      // A couple of palms in the boss arena corners
+      this.add.image(2 * TILE + 30, this.groundTop - 20, "palm").setDepth(4);
+      this.add.image(this.levelW - 2 * TILE - 30, this.groundTop - 20, "palm").setFlipX(true).setDepth(4);
+      return;
+    }
+
+    // Decorative plants / palms spread across the ground
+    const step = 260;
+    for (let x = 140; x < this.levelW - 100; x += step) {
+      const r = Math.random();
+      const kind = r < 0.5 ? "plant" : r < 0.8 ? "plant-big" : "palm";
+      const lift = kind === "palm" ? 26 : kind === "plant-big" ? 20 : 12;
+      const d = this.add.image(x, this.groundTop - lift, kind).setDepth(4);
+      if (Math.random() < 0.5) d.setFlipX(true);
+    }
+
+    // Animated force-field barriers on later levels (jump over them)
+    if (this.levelIndex >= 2) {
+      const walls = this.levelW > 2000 ? [520, 1150, 1800, 2500] : [420, 1000, 1500];
+      for (const px of walls) {
+        if (px >= this.levelW - 120) continue;
+        this.spawnForceField(px);
+      }
+    }
+  }
+
+  spawnForceField(x) {
+    const wall = this.physics.add.group({ allowGravity: false });
+    for (let i = 0; i < 2; i++) {
+      const seg = wall.create(x, this.groundTop - 16 - i * 32, "force-field-1");
+      seg.play("forcefield");
+      seg.setDepth(7);
+    }
+    this.physics.add.overlap(this.player, wall, () => this.hurtPlayer(false));
   }
 
   buildHud() {
