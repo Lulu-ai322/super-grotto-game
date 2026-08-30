@@ -122,13 +122,8 @@ class PreloadScene extends Phaser.Scene {
     this.load.image("ui-panel2",  A + "ui/panel2.png");
     this.load.image("ui-bar",     A + "ui/pixel-ui-05.png");
 
-    // Minotaur boss (mino sprites, 288x160 frames) + its HP bar UI
-    for (let i = 1; i <= 16; i++) this.load.image("mino-idle-" + i, A + "enemies/mino-idle-" + i + ".png");
-    for (let i = 1; i <= 12; i++) this.load.image("mino-walk-" + i, A + "enemies/mino-walk-" + i + ".png");
-    for (let i = 1; i <= 16; i++) this.load.image("mino-atk-" + i,  A + "enemies/mino-atk-" + i + ".png");
-    this.load.image("boss-hp-under",    A + "ui/boss-hp-under.png");
-    this.load.image("boss-hp-progress", A + "ui/boss-hp-progress.png");
-    this.load.image("boss-hp-over",     A + "ui/boss-hp-over.png");
+    // Minotaur boss assets are loaded by boss.js (separate file)
+    this.preloadBoss();
 
     // New creatures (Tiny RPG pack) — 100x100 frames
     this.load.spritesheet("demon-idle",    A + "enemies/demon-idle.png",    { frameWidth: 100, frameHeight: 100 });
@@ -406,14 +401,7 @@ class GameScene extends Phaser.Scene {
   }
 
   createEnemyAnims() {
-    if (this.cfg.boss) {
-      // Minotaur boss frames are individual images
-      const seq = (n, k) => Array.from({ length: n }, (_, i) => ({ key: k + (i + 1) }));
-      this.anims.create({ key: "mino-idle", frames: seq(16, "mino-idle-"), frameRate: 6,  repeat: -1 });
-      this.anims.create({ key: "mino-walk", frames: seq(12, "mino-walk-"), frameRate: 7,  repeat: -1 });
-      this.anims.create({ key: "mino-atk",  frames: seq(16, "mino-atk-"),  frameRate: 12, repeat: 0 });
-      return;
-    }
+    if (this.cfg.boss) { this.createBossAnims(); return; }
     this.anims.create({ key: "slime",     frames: this.anims.generateFrameNumbers("slime",     { frames: [0,1,2,3,4] }), frameRate: 8,  repeat: -1 });
     this.anims.create({ key: "bat",       frames: this.anims.generateFrameNumbers("bat",       { frames: [0,1,2,3,4] }), frameRate: 8,  repeat: -1 });
     this.anims.create({ key: "skel-walk", frames: this.anims.generateFrameNumbers("skel-walk", { frames: [0,1,2,3,4,5,6,7] }), frameRate: 10, repeat: -1 });
@@ -522,67 +510,6 @@ class GameScene extends Phaser.Scene {
     // Gate (goal)
     this.gate = this.physics.add.staticImage(this.gatePos.x, this.gatePos.y, "gate").setDepth(4);
     this.physics.add.overlap(this.player, this.gate, () => this.win(), null, this);
-  }
-
-  /* ------------------------- boss fight ------------------------- */
-  spawnBoss() {
-    const boss = this.enemies.create(this.levelW - 8 * TILE, this.groundTop - 70, "mino-idle-1");
-    boss.setScale(0.55);
-    boss.body.setSize(150, 130).setOffset(69, 26);
-    boss.setCollideWorldBounds(true);
-    boss.etype = "boss";
-    boss.dir = -1;
-    boss.speed = 62;
-    boss.bossMax = 30;
-    boss.bossHp = boss.bossMax;
-    boss.attackT = 0;
-    boss.setDepth(12);
-    this.boss = boss;
-    boss.play("mino-idle");
-
-    // Boss names the arena; no escape gate — defeat the minotaur to win
-    this.maxScore = boss.bossMax * 100 + 1000;
-    this.defeatedBoss = false;
-    this.buildBossHud();
-  }
-
-  buildBossHud() {
-    const s = 1.8;
-    const cx = GAME_W / 2, cy = 38;
-    this.add.image(cx, cy, "boss-hp-under").setScrollFactor(0).setDepth(150).setScale(s);
-    // Inner fill area (from boss-hp-under.png 160x64: bar spans x8..152, y23..32)
-    const uw = 160 * s, uh = 64 * s;
-    this.bossFillW = (152 - 8) * s;
-    this.bossFillH = (32 - 23) * s;
-    const fx = cx - uw / 2 + 8 * s;
-    const fy = cy - uh / 2 + (23 + (32 - 23) / 2) * s;
-    this.bossFill = this.add.rectangle(fx, fy, this.bossFillW, this.bossFillH, 0x6b3ff0)
-      .setOrigin(0, 0.5).setScrollFactor(0).setDepth(151);
-    this.add.image(cx, cy, "boss-hp-progress").setScrollFactor(0).setDepth(151).setScale(s);
-    this.add.image(cx, cy, "boss-hp-over").setScrollFactor(0).setDepth(152).setScale(s).setAlpha(0.9);
-    this.bossFill.setAlpha(0.35);
-    this.updateBossHud();
-  }
-
-  updateBossHud() {
-    const r = this.boss ? Phaser.Math.Clamp(this.boss.bossHp / this.boss.bossMax, 0, 1) : 1;
-    if (this.bossFill) this.bossFill.setSize(this.bossFillW * Math.max(0.001, r), this.bossFillH);
-  }
-
-  defeatBoss(boss) {
-    if (this.defeatedBoss) return;
-    this.defeatedBoss = true;
-    boss.destroy();
-    this.score += 1000;
-    this.updateHud();
-    this.cameras.main.shake(260, 0.015);
-    for (let i = 0; i < 5; i++) {
-      const d = this.add.sprite(boss.x, boss.y - 30 + i * 22, "explosion")
-        .setDepth(20).setScale(1.4 + i * 0.3).play("explosion");
-      this.time.delayedCall(360, () => d.destroy());
-    }
-    this.floatScore(boss.x, boss.y - 70, 1000);
-    this.time.delayedCall(650, () => this.win());
   }
 
   buildHud() {
@@ -723,27 +650,7 @@ class GameScene extends Phaser.Scene {
         e.setFlipX(e.dir > 0);
         if (e.x < 40 || e.x > this.levelW - 40) e.dir *= -1;
       } else if (e.etype === "boss") {
-        if (this.defeatedBoss) { e.setVelocityX(0); }
-        if (e.attackT > 0) {
-          e.attackT -= delta;
-          e.setVelocityX(0);
-          if (e.attackT <= 0) e.play("mino-walk", true);
-        } else {
-          const p = this.player;
-          const near = p && Math.abs(p.x - e.x) < 130 && Math.abs(p.y - e.y) < 150 && p.y > this.groundTop - 140;
-          if (near) {
-            e.dir = p.x < e.x ? -1 : 1;
-            e.setFlipX(e.dir < 0);
-            e.setVelocityX(0);
-            e.play("mino-atk", true);
-            e.attackT = 520 + Math.random() * 220;
-          } else {
-            e.setVelocityX(e.dir * e.speed);
-            e.setFlipX(e.dir < 0);
-            if (e.body.blocked.left) e.dir = 1;
-            if (e.body.blocked.right) e.dir = -1;
-          }
-        }
+        this.updateBoss(e, delta);
       }
     });
 
@@ -775,14 +682,7 @@ class GameScene extends Phaser.Scene {
     this.score += 100;
     this.updateHud();
     if (type === "boss") {
-      // Boss takes many hits — reduce HP, not a one-shot kill
-      enemy.bossHp -= 1;
-      this.updateBossHud();
-      this.floatScore(ex, ey - 20, 100);
-      enemy.setVelocity(enemy.dir > 0 ? -120 : 120, -60);
-      enemy.setTintFill(0xffffff);
-      this.time.delayedCall(90, () => { if (enemy.active) enemy.clearTint(); });
-      if (enemy.bossHp <= 0) this.defeatBoss(enemy);
+      this.bossHit(enemy, ex, ey);
       return;
     }
     if (type === "demon" || type === "blood") {
