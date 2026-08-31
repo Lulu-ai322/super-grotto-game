@@ -22,24 +22,21 @@
 
   PreloadScene.prototype.preloadGollux = function () {
     const A = "assets/boss/";
-    this.load.spritesheet("gollux-idle",    A + "gollux_idle.png",    { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet("gollux-move",    A + "gollux_move.png",    { frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet("gollux-atkA",    A + "gollux_attack_A.png",{ frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet("gollux-atkB",    A + "gollux_attack_B.png",{ frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet("gollux-heal",    A + "gollux_healing.png",{ frameWidth: 128, frameHeight: 128 });
-    this.load.spritesheet("gollux-hit",     A + "gollux_hit.png",     { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("gollux-idle", A + "gollux_idle.png",     { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet("gollux-move", A + "gollux_move.png",     { frameWidth: 272, frameHeight: 128 });
+    this.load.spritesheet("gollux-atkA", A + "gollux_attack_A.png", { frameWidth: 272, frameHeight: 128 });
+    this.load.spritesheet("gollux-atkB", A + "gollux_attack_B.png", { frameWidth: 272, frameHeight: 128 });
+    this.load.spritesheet("gollux-heal", A + "gollux_healing.png",  { frameWidth: 272, frameHeight: 128 });
+    this.load.spritesheet("gollux-hit",  A + "gollux_hit.png",      { frameWidth: 272, frameHeight: 128 });
   };
-
-  // Subsample to a slim set of key frames for snappy attacks
-  const pick = (n, total) => Array.from({ length: n }, (_, i) => Math.floor(i * (total - 1) / Math.max(1, n - 1)));
 
   GameScene.prototype.createGolluxAnims = function () {
     this.anims.create({ key: "gollux-idle", frames: this.anims.generateFrameNumbers("gollux-idle", { frames: [0,1,2,3,4] }), frameRate: 5, repeat: -1 });
-    this.anims.create({ key: "gollux-move", frames: this.anims.generateFrameNumbers("gollux-move", { frames: pick(16, 24) }), frameRate: 9, repeat: -1 });
-    this.anims.create({ key: "gollux-atkA", frames: this.anims.generateFrameNumbers("gollux-atkA", { frames: pick(18, 51) }), frameRate: 14, repeat: 0 });
-    this.anims.create({ key: "gollux-atkB", frames: this.anims.generateFrameNumbers("gollux-atkB", { frames: pick(18, 57) }), frameRate: 14, repeat: 0 });
-    this.anims.create({ key: "gollux-heal", frames: this.anims.generateFrameNumbers("gollux-heal", { frames: pick(20, 75) }), frameRate: 8, repeat: 0 });
-    this.anims.create({ key: "gollux-hit",  frames: this.anims.generateFrameNumbers("gollux-hit",  { frames: [0,1,2,3,4] }), frameRate: 14, repeat: 0 });
+    this.anims.create({ key: "gollux-move", frames: this.anims.generateFrameNumbers("gollux-move", { frames: [0,1,2,3,4,5,6,7] }), frameRate: 8, repeat: -1 });
+    this.anims.create({ key: "gollux-atkA", frames: this.anims.generateFrameNumbers("gollux-atkA", { frames: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16] }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: "gollux-atkB", frames: this.anims.generateFrameNumbers("gollux-atkB", { frames: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18] }), frameRate: 12, repeat: 0 });
+    this.anims.create({ key: "gollux-heal", frames: this.anims.generateFrameNumbers("gollux-heal", { frames: Array.from({ length: 25 }, (_, i) => i) }), frameRate: 8, repeat: 0 });
+    this.anims.create({ key: "gollux-hit",  frames: this.anims.generateFrameNumbers("gollux-hit",  { frames: [0,1,2,3] }), frameRate: 10, repeat: 0 });
   };
 
   GameScene.prototype.spawnGollux = function () {
@@ -51,7 +48,7 @@
 
     const boss = this.enemies.create(this.levelW - 9 * TILE, this.groundTop - 90, "gollux-idle");
     boss.setScale(GOLLUX.scale);
-    boss.body.setSize(64, 90).setOffset(32, 30);
+    boss.body.setSize(118, 54).setOffset(77, 37);
     boss.setCollideWorldBounds(true);
     boss.etype = "boss";
     boss.bossKind = "gollux";
