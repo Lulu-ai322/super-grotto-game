@@ -115,9 +115,14 @@ class PreloadScene extends Phaser.Scene {
     this.load.spritesheet("p-ladder",A + "player/player-ladder.png",{ frameWidth: 32, frameHeight: 38 });
 
     this.load.spritesheet("slime",     A + "enemies/slime.png",         { frameWidth: 32, frameHeight: 32 });
-    this.load.spritesheet("bat",       A + "enemies/bat.png",           { frameWidth: 48, frameHeight: 48 });
     this.load.spritesheet("skel-idle", A + "enemies/skeleton-idle.png", { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet("skel-walk", A + "enemies/skeleton-walk.png", { frameWidth: 32, frameHeight: 32 });
+
+    // Dark Fantasy bat (replaces the old grotto bat) — 64x64 frames
+    this.load.spritesheet("nbat-fly",    A + "enemies/nbat-fly.png",    { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("nbat-attack", A + "enemies/nbat-attack.png", { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("nbat-die",    A + "enemies/nbat-die.png",    { frameWidth: 64, frameHeight: 64 });
+    this.load.spritesheet("nbat-hurt",   A + "enemies/nbat-hurt.png",   { frameWidth: 64, frameHeight: 64 });
 
     // Tileset loaded as a plain image so it can be used by the tilemap.
     this.load.image("tiles", A + "env/tileset.png");
@@ -146,9 +151,7 @@ class PreloadScene extends Phaser.Scene {
 
     // Fort of Illusion theme (levels 11+)
     this.load.image("f-tiles",    A + "fort/tileset.png");
-    this.load.image("f-back",     A + "fort/back.png");
-    this.load.image("f-mountains",A + "fort/mountains.png");
-    this.load.image("f-front",    A + "fort/front.png");
+    this.load.image("f-backdrop", A + "fort/backdrop.png");
     this.load.image("f-banner",   A + "fort/props/banner.png");
     this.load.image("f-flag",     A + "fort/props/flag.png");
     this.load.image("f-window",   A + "fort/props/window.png");
@@ -419,10 +422,9 @@ class GameScene extends Phaser.Scene {
     };
 
     if (isFortLevel(this.levelIndex)) {
-      // Fort of Illusion backdrop: distant castles -> mountains -> fort wall
-      mk("f-back",     0.12, -90);
-      mk("f-mountains", 0.30, -86);
-      mk("f-front",     0.55, -82);
+      // Fort of Illusion: one wide panorama (level-width, 3840px) drawn once with a
+      // slow scroll factor for parallax. No tiling -> never looks like a repeated image.
+      this.add.image(0, 0, "f-backdrop").setOrigin(0, 0).setDepth(-90).setScrollFactor(0.35, 0);
       return;
     }
     mk("back",   0.15).setDepth(-90);
@@ -453,7 +455,8 @@ class GameScene extends Phaser.Scene {
   createEnemyAnims() {
     if (this.cfg.boss) { this.createBossAnims(); return; }
     this.anims.create({ key: "slime",     frames: this.anims.generateFrameNumbers("slime",     { frames: [0,1,2,3,4] }), frameRate: 8,  repeat: -1 });
-    this.anims.create({ key: "bat",       frames: this.anims.generateFrameNumbers("bat",       { frames: [0,1,2,3,4] }), frameRate: 8,  repeat: -1 });
+    this.anims.create({ key: "bat",       frames: this.anims.generateFrameNumbers("nbat-fly",  { frames: [0,1,2,3,4,5,6,7,8] }), frameRate: 10, repeat: -1 });
+    this.anims.create({ key: "bat-die",   frames: this.anims.generateFrameNumbers("nbat-die",  { frames: [0,1,2,3,4,5,6,7,8,9,10,11] }), frameRate: 14, repeat: 0 });
     this.anims.create({ key: "skel-walk", frames: this.anims.generateFrameNumbers("skel-walk", { frames: [0,1,2,3,4,5,6,7] }), frameRate: 10, repeat: -1 });
     // New creatures (100x100 frames)
     this.anims.create({ key: "demon-idle",   frames: this.anims.generateFrameNumbers("demon-idle",   { frames: [0,1,2,3,4,5] }), frameRate: 8,  repeat: -1 });
@@ -505,12 +508,13 @@ class GameScene extends Phaser.Scene {
       e.setCollideWorldBounds(true);
     };
     const addBat = (x, y) => {
-      const e = this.enemies.create(x, y, "bat");
-      e.body.setSize(36, 30).setOffset(6, 8);
+      const e = this.enemies.create(x, y, "nbat-fly");
+      e.setScale(0.72);
+      e.body.setSize(48, 30).setOffset(8, 17);
       e.body.setAllowGravity(false);
       e.play("bat");
-      e.etype = "bat"; e.baseY = y; e.t = Math.random() * Math.PI * 2;
-      e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 70 * sp;
+      e.etype = "bat"; e.gfxScale = 0.72; e.baseY = y; e.t = Math.random() * Math.PI * 2;
+      e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 80 * sp;
     };
     const addDemon = (x, y) => {
       const e = this.enemies.create(x, y, "demon-walk");
@@ -801,8 +805,13 @@ class GameScene extends Phaser.Scene {
       enemy.destroy();
       const d = this.add.sprite(ex, ey, type + "-death").setDepth(20).setScale(sc).setFlipX(flip).play(type + "-death");
       this.time.delayedCall(420, () => d.destroy());
+    } else if (type === "bat") {
+      // Dark Fantasy bat has its own death animation
+      enemy.destroy();
+      const d = this.add.sprite(ex, ey, "nbat-die").setDepth(20).setScale(sc).setFlipX(flip).play("bat-die");
+      this.time.delayedCall(460, () => d.destroy());
     } else {
-      // Grotto enemies (slime/bat/skeleton) have no death anim — blow them up
+      // Grotto enemies (slime/skeleton) have no death anim — blow them up
       enemy.destroy();
       const d = this.add.sprite(ex, ey, "explosion").setDepth(20).setScale(1.1).play("explosion");
       this.time.delayedCall(360, () => d.destroy());
