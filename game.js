@@ -10,6 +10,11 @@ const GROUND_TILE = 302; // verified opaque dark stone tile in tileset.png
 // level has its own platform look while the ground stays consistent.
 const PLAT_TILES = [62, 85, 93, 116, 128, 151, 162, 174, 185, 197];
 
+// ---- Fort of Illusion theme (levels 11+) ----
+const FORT_START_INDEX = 10; // first fort level (0-based index -> level "11")
+const FORT_GROUND = 13;      // solid purple castle-stone tile in fort tileset
+const FORT_PLAT_TILES = [13, 42, 23, 68, 14, 43, 69, 56, 84, 20]; // distinct fort wall tiles
+
 // Level definitions (difficulty scales enemy speed / count). New creatures appear from L4+.
 const LEVELS = [
   { name: "1", speed: 1.0, count: 12, theme: 0x9dffc2 },
@@ -22,7 +27,15 @@ const LEVELS = [
   { name: "8", speed: 2.1, count: 30, demon: 7, blood: 6, theme: 0xffe08a },
   { name: "9", speed: 2.4, count: 36, demon: 9, blood: 7, bat: 12, theme: 0xff7a6b },
   { name: "10", speed: 1.0, count: 0, boss: true, theme: 0x4b2a68 },
+  // ---- Fort of Illusion (after the level-10 finale) ----
+  { name: "11", speed: 2.4, count: 30, demon: 8,  blood: 6,  bat: 10, theme: 0x8f7fd0 },
+  { name: "12", speed: 2.5, count: 32, demon: 9,  blood: 7,  bat: 12, theme: 0x9fb8d8 },
+  { name: "13", speed: 2.6, count: 34, demon: 10, blood: 8,  bat: 14, theme: 0x8fb89a },
+  { name: "14", speed: 2.7, count: 36, demon: 11, blood: 9,  bat: 16, theme: 0xd8b07a },
+  { name: "15", speed: 2.8, count: 38, demon: 12, blood: 10, bat: 18, theme: 0xc98a9a },
 ];
+
+function isFortLevel(levelIndex) { return levelIndex >= FORT_START_INDEX; }
 
 // Four distinct floating-platform layouts (32px units: [startCol,endCol,row]).
 // row is kept within double-jump reach of the ground so every level is completable.
@@ -130,6 +143,17 @@ class PreloadScene extends Phaser.Scene {
     this.load.image("plant",      A + "env/plant.png");
     this.load.image("plant-big",  A + "env/plant-big.png");
     for (let i = 1; i <= 5; i++) this.load.image("force-field-" + i, A + "env/force-field-" + i + ".png");
+
+    // Fort of Illusion theme (levels 11+)
+    this.load.image("f-tiles",    A + "fort/tileset.png");
+    this.load.image("f-back",     A + "fort/back.png");
+    this.load.image("f-mountains",A + "fort/mountains.png");
+    this.load.image("f-front",    A + "fort/front.png");
+    this.load.image("f-banner",   A + "fort/props/banner.png");
+    this.load.image("f-flag",     A + "fort/props/flag.png");
+    this.load.image("f-window",   A + "fort/props/window.png");
+    this.load.image("f-door",     A + "fort/props/door.png");
+    this.load.image("f-closed-door", A + "fort/props/closed-door.png");
 
     // Minotaur boss assets are loaded by boss.js (separate file)
     this.preloadBoss();
@@ -261,15 +285,16 @@ class LevelScene extends Phaser.Scene {
     this.add.text(GAME_W / 2, 104, "Complete a level to unlock the next", { fontFamily: "monospace", fontSize: "13px", color: "#9fb3c8" }).setOrigin(0.5);
 
     // 2-column grid so all levels fit on screen
-    const colX = [250, 550], startY = 140, rowH = 72, pw = 240, ph = 50;
+    const colX = [250, 550], startY = 132, rowH = 38, pw = 220, ph = 30;
     LEVELS.forEach((lv, i) => {
+      const fort = isFortLevel(i);
       const x = colX[i % 2], y = startY + Math.floor(i / 2) * rowH;
       const locked = i > UNLOCKED;
       const done = i < UNLOCKED;
-      this.add.image(x, y, "ui-panel" + (locked ? "2" : "")).setDisplaySize(pw, ph).setTint(locked ? 0x55585f : 0xffffff);
-      let label = "LEVEL " + lv.name;
-      if (locked) label = "LEVEL " + lv.name + "  [LOCKED]";
-      else if (done) label = "LEVEL " + lv.name + "  [CLEARED]";
+      this.add.image(x, y, "ui-panel" + (locked ? "2" : "")).setDisplaySize(pw, ph).setTint(locked ? 0x55585f : (fort ? 0xb58fe0 : 0xffffff));
+      let label = (fort ? "FORT " : "LEVEL ") + lv.name;
+      if (locked) label = (fort ? "FORT " : "LEVEL ") + lv.name + "  [LOCKED]";
+      else if (done) label = (fort ? "FORT " : "LEVEL ") + lv.name + "  [CLEARED]";
       this.add.text(x, y, label, {
         fontFamily: "monospace", fontSize: locked ? 14 : 19, color: locked ? "#9aa0aa" : "#e8f0fe",
       }).setOrigin(0.5);
@@ -337,8 +362,12 @@ class GameScene extends Phaser.Scene {
   buildLevel(COLS, ROWS) {
     const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(-1));
     const ground = ROWS - 2;
-    const platGid = (PLAT_TILES[this.levelIndex % PLAT_TILES.length]) || GROUND_TILE;
-    for (let x = 0; x < COLS; x++) { grid[ground][x] = GROUND_TILE; grid[ground + 1][x] = GROUND_TILE; }
+    const fort = isFortLevel(this.levelIndex);
+    const groundGid = fort ? FORT_GROUND : GROUND_TILE;
+    const platGid = fort
+      ? (FORT_PLAT_TILES[this.levelIndex % FORT_PLAT_TILES.length] || FORT_GROUND)
+      : (PLAT_TILES[this.levelIndex % PLAT_TILES.length] || GROUND_TILE);
+    for (let x = 0; x < COLS; x++) { grid[ground][x] = groundGid; grid[ground + 1][x] = groundGid; }
 
     if (this.cfg.boss) {
       // Compact boss arena: flat ground + a few high platforms to dodge on
@@ -360,9 +389,9 @@ class GameScene extends Phaser.Scene {
     }
 
     this.platGid = platGid;
-    this.collisionGids = [GROUND_TILE, platGid];
+    this.collisionGids = [groundGid, platGid].filter((v, i, a) => a.indexOf(v) === i);
     const map = this.make.tilemap({ data: grid, tileWidth: TILE, tileHeight: TILE });
-    const tileset = map.addTilesetImage("tiles", "tiles", TILE, TILE);
+    const tileset = map.addTilesetImage(fort ? "f-tiles" : "tiles", fort ? "f-tiles" : "tiles", TILE, TILE);
     this.solidLayer = map.createLayer(0, tileset, 0, 0);
     this.solidLayer.setCollision(this.collisionGids);
     this.solidLayer.setDepth(0);
@@ -382,12 +411,20 @@ class GameScene extends Phaser.Scene {
     };
     const sky = mix(0x0b0f1a, theme, 0.22);
     this.add.rectangle(0, 0, GAME_W, GAME_H, sky).setOrigin(0).setScrollFactor(0).setDepth(-100);
-    const mk = (key, scroll) => {
+    const mk = (key, scroll, baseDepth = -90) => {
       const h = GAME_H;
-      const ts = this.add.tileSprite(0, 0, GAME_W, h, key).setOrigin(0, 0).setScrollFactor(0).setDepth(-90).setTint(theme);
+      const ts = this.add.tileSprite(0, 0, GAME_W, h, key).setOrigin(0, 0).setScrollFactor(0).setDepth(baseDepth).setTint(theme);
       this.cameras.main.on("camerascroll", (cam) => { ts.tilePositionX = cam.scrollX * scroll; });
       return ts;
     };
+
+    if (isFortLevel(this.levelIndex)) {
+      // Fort of Illusion backdrop: distant castles -> mountains -> fort wall
+      mk("f-back",     0.12, -90);
+      mk("f-mountains", 0.30, -86);
+      mk("f-front",     0.55, -82);
+      return;
+    }
     mk("back",   0.15).setDepth(-90);
     mk("far",    0.35).setDepth(-85);
     mk("middle", 0.60).setDepth(-80);
@@ -529,7 +566,7 @@ class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.gate, () => this.win(), null, this);
   }
 
-  /* -- Environment decoration (plants, palms, force fields) -- */
+  /* -- Environment decoration (plants, palms, force fields / fort props) -- */
   spawnEnvironment() {
     if (this.cfg.boss) {
       // A couple of palms in the boss arena corners
@@ -538,14 +575,33 @@ class GameScene extends Phaser.Scene {
       return;
     }
 
-    // Decorative plants / palms spread across the ground
-    const step = 260;
-    for (let x = 140; x < this.levelW - 100; x += step) {
-      const r = Math.random();
-      const kind = r < 0.5 ? "plant" : r < 0.8 ? "plant-big" : "palm";
-      const lift = kind === "palm" ? 26 : kind === "plant-big" ? 20 : 12;
-      const d = this.add.image(x, this.groundTop - lift, kind).setDepth(4);
-      if (Math.random() < 0.5) d.setFlipX(true);
+    if (isFortLevel(this.levelIndex)) {
+      // Fort props decorating the castle walls
+      const step = 300;
+      for (let x = 160; x < this.levelW - 120; x += step) {
+        const r = Math.random();
+        let kind = "f-banner", lift = 55, scale = 1;
+        if (r < 0.35) { kind = "f-window"; lift = 76; scale = 0.9; }
+        else if (r < 0.6) { kind = "f-flag"; lift = 42; }
+        const d = this.add.image(x, this.groundTop - lift, kind).setDepth(4);
+        if (scale !== 1) d.setScale(scale);
+        if (Math.random() < 0.5) d.setFlipX(true);
+      }
+      // A grand door in the middle of the fort, and one near the exit
+      const door = this.add.image(this.levelW / 2, this.groundTop - 40, "f-door").setDepth(4);
+      door.setScale(2.2);
+      const door2 = this.add.image(this.levelW - 12 * TILE, this.groundTop - 36, "f-closed-door").setDepth(4);
+      door2.setScale(1.6);
+    } else {
+      // Decorative plants / palms spread across the ground
+      const step = 260;
+      for (let x = 140; x < this.levelW - 100; x += step) {
+        const r = Math.random();
+        const kind = r < 0.5 ? "plant" : r < 0.8 ? "plant-big" : "palm";
+        const lift = kind === "palm" ? 26 : kind === "plant-big" ? 20 : 12;
+        const d = this.add.image(x, this.groundTop - lift, kind).setDepth(4);
+        if (Math.random() < 0.5) d.setFlipX(true);
+      }
     }
 
     // Animated force-field barriers on later levels (jump over them)
@@ -805,7 +861,7 @@ class GameScene extends Phaser.Scene {
   }
 
   showLevelIntro() {
-    const label = this.cfg.boss ? "FINAL BOSS — MINOTAUR" : "LEVEL " + this.cfg.name;
+    const label = this.cfg.boss ? "FINAL BOSS — MINOTAUR" : (isFortLevel(this.levelIndex) ? "FORT " + this.cfg.name : "LEVEL " + this.cfg.name);
     const t = this.add.text(GAME_W / 2, GAME_H / 2 - 40, label, {
       fontFamily: "monospace", fontSize: this.cfg.boss ? 34 : 48, color: "#ffd86b", stroke: "#0a3a24", strokeThickness: 6,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(180);
