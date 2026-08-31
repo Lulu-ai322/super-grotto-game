@@ -33,6 +33,8 @@ const LEVELS = [
   { name: "13", speed: 1.7, count: 18, demon: 5,  blood: 4,  bat: 8,  theme: 0x8fb89a },
   { name: "14", speed: 1.8, count: 19, demon: 6,  blood: 5,  bat: 9,  theme: 0xd8b07a },
   { name: "15", speed: 1.9, count: 20, demon: 6,  blood: 5,  bat: 10, theme: 0xc98a9a },
+  // ---- Fort Finale: the Gollux boss (after all 15 levels) ----
+  { name: "16", speed: 1.0, count: 0, boss: true, theme: 0x6f5bb0 },
 ];
 
 function isFortLevel(levelIndex) { return levelIndex >= FORT_START_INDEX; }
@@ -160,6 +162,8 @@ class PreloadScene extends Phaser.Scene {
 
     // Minotaur boss assets are loaded by boss.js (separate file)
     this.preloadBoss();
+    // Gollux (Fort boss) assets are loaded by gollux.js (separate file)
+    this.preloadGollux();
 
     // New creatures (Tiny RPG pack) — 100x100 frames
     this.load.spritesheet("demon-idle",    A + "enemies/demon-idle.png",    { frameWidth: 100, frameHeight: 100 });
@@ -870,7 +874,8 @@ class GameScene extends Phaser.Scene {
   }
 
   showLevelIntro() {
-    const label = this.cfg.boss ? "FINAL BOSS — MINOTAUR" : (isFortLevel(this.levelIndex) ? "FORT " + this.cfg.name : "LEVEL " + this.cfg.name);
+    const bossName = this.levelIndex === 9 ? "FINAL BOSS — MINOTAUR" : (this.cfg.boss ? "FINAL BOSS — GOLLUX" : "");
+    const label = this.cfg.boss ? bossName : (isFortLevel(this.levelIndex) ? "FORT " + this.cfg.name : "LEVEL " + this.cfg.name);
     const t = this.add.text(GAME_W / 2, GAME_H / 2 - 40, label, {
       fontFamily: "monospace", fontSize: this.cfg.boss ? 34 : 48, color: "#ffd86b", stroke: "#0a3a24", strokeThickness: 6,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(180);
