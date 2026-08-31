@@ -29,6 +29,8 @@ Reach the **gate** at the end of each level to escape and unlock the next one.
 - **Levels 11-15 (Fort of Illusion)** — a second chapter after the boss finale with a
   brand-new fort environment: its own tileset/platforms, castle/mountain parallax
   backgrounds, and fort props (banners, flags, windows, doors).
+- **Level 16 — Fort Finale Boss**: the **Gollux** boss fights you in the fort. It
+  glides toward you, fires ranged energy projectiles, and slams when you get close.
 - **Score & 3-star rating** — full score earns 3 stars on the win screen.
 - **Player health bar** (uses the Pixel UI bar asset), red when low.
 - **Environment decoration** — palm trees and plants in the grotto levels, fort props
@@ -41,19 +43,22 @@ Reach the **gate** at the end of each level to escape and unlock the next one.
 - **Fort of Illusion environment** (levels 11+) — `Fort of Illusion` (tonyredhead).
 - **Demon & Blood creatures** — `Tiny RPG` (press start).
 - **UI panels, bars & medallions** — `Pixel UI`.
-- **Minotaur boss + HP bar** — `mino v1.1` free.
+ - **Minotaur boss + HP bar** — `mino v1.1` free.
+ - **Gollux boss** (fort finale) — `Bosses_Gollux` free.
 - **Music** — included under `assets/audio/` (see licensing in the pack).
 
 ## Project structure
 
 ```
-index.html    Entry point (loads game.js + boss.js)
+index.html    Entry point (loads game.js + boss.js + gollux.js)
 game.js       Core game code: scenes, levels, player, enemies, HUD
 boss.js       Minotaur boss: assets, AI, HP bar, defeat
+gollux.js     Gollux (fort finale) boss: assets, AI, ranged/melee, defeat
 assets/
   env/        Tileset, parallax backgrounds, plants, force fields
   fort/       Fort of Illusion tileset, backgrounds, props (levels 11+)
   enemies/    Slime, bat, skeleton, demon, blood, minotaur
+  boss/       Gollux boss spritesheets (fort finale)
   player/     Player sprites
   props/      Batteries, crate, gate
   fx/         Explosions, pickups, bullets
