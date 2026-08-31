@@ -6,6 +6,9 @@ const GAME_W = 800;
 const GAME_H = 480;
 
 const GROUND_TILE = 302; // verified opaque dark stone tile in tileset.png
+// Distinct opaque solid-platform tile per level (index-aligned with LEVELS) so each
+// level has its own platform look while the ground stays consistent.
+const PLAT_TILES = [62, 85, 93, 116, 128, 151, 162, 174, 185, 197];
 
 // Level definitions (difficulty scales enemy speed / count). New creatures appear from L4+.
 const LEVELS = [
@@ -334,6 +337,7 @@ class GameScene extends Phaser.Scene {
   buildLevel(COLS, ROWS) {
     const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(-1));
     const ground = ROWS - 2;
+    const platGid = (PLAT_TILES[this.levelIndex % PLAT_TILES.length]) || GROUND_TILE;
     for (let x = 0; x < COLS; x++) { grid[ground][x] = GROUND_TILE; grid[ground + 1][x] = GROUND_TILE; }
 
     if (this.cfg.boss) {
@@ -341,7 +345,7 @@ class GameScene extends Phaser.Scene {
       this.plats = [];
       for (const [a, b, r] of [[6,10,12],[16,21,10],[28,32,12],[38,43,10],[46,50,12]]) {
         const a2 = a * 2, b2 = b * 2, r2 = r * 2;
-        for (let x = a2; x <= b2; x++) grid[r2][x] = GROUND_TILE;
+        for (let x = a2; x <= b2; x++) grid[r2][x] = platGid;
         this.plats.push({ x: (a2 + b2) / 2 * TILE, y: (r2 - 1) * TILE });
       }
     } else {
@@ -350,15 +354,17 @@ class GameScene extends Phaser.Scene {
       this.plats = [];
       for (const [a, b, r] of plats32) {
         const a2 = a * 2, b2 = b * 2, r2 = r * 2;
-        for (let x = a2; x <= b2; x++) grid[r2][x] = GROUND_TILE;
+        for (let x = a2; x <= b2; x++) grid[r2][x] = platGid;
         this.plats.push({ x: (a2 + b2) / 2 * TILE, y: (r2 - 1) * TILE });
       }
     }
 
+    this.platGid = platGid;
+    this.collisionGids = [GROUND_TILE, platGid];
     const map = this.make.tilemap({ data: grid, tileWidth: TILE, tileHeight: TILE });
     const tileset = map.addTilesetImage("tiles", "tiles", TILE, TILE);
     this.solidLayer = map.createLayer(0, tileset, 0, 0);
-    this.solidLayer.setCollision(GROUND_TILE);
+    this.solidLayer.setCollision(this.collisionGids);
     this.solidLayer.setDepth(0);
 
     this.playerStart = { x: 4 * TILE, y: this.groundTop - 48 };
