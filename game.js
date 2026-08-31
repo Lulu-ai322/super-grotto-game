@@ -17,22 +17,22 @@ const FORT_PLAT_TILES = [13, 42, 23, 68, 14, 43, 69, 56, 84, 20]; // distinct fo
 
 // Level definitions (difficulty scales enemy speed / count). New creatures appear from L4+.
 const LEVELS = [
-  { name: "1", speed: 1.0, count: 12, theme: 0x9dffc2 },
-  { name: "2", speed: 1.2, count: 16, theme: 0x8fe8e8 },
-  { name: "3", speed: 1.4, count: 20, bat: 9, theme: 0xb39dff },
-  { name: "4", speed: 1.4, count: 18, demon: 4, theme: 0xffb37a },
-  { name: "5", speed: 1.6, count: 22, demon: 5, blood: 3, theme: 0xff8a8a },
-  { name: "6", speed: 1.7, count: 24, demon: 6, theme: 0xcf9dff },
-  { name: "7", speed: 1.9, count: 26, demon: 5, blood: 5, theme: 0x9fd8ff },
-  { name: "8", speed: 2.1, count: 30, demon: 7, blood: 6, theme: 0xffe08a },
-  { name: "9", speed: 2.4, count: 36, demon: 9, blood: 7, bat: 12, theme: 0xff7a6b },
+  { name: "1", speed: 0.9, count: 8,  theme: 0x9dffc2 },
+  { name: "2", speed: 1.0, count: 10, theme: 0x8fe8e8 },
+  { name: "3", speed: 1.0, count: 12, bat: 6, theme: 0xb39dff },
+  { name: "4", speed: 1.1, count: 10, demon: 3, theme: 0xffb37a },
+  { name: "5", speed: 1.2, count: 12, demon: 3, blood: 2, theme: 0xff8a8a },
+  { name: "6", speed: 1.2, count: 13, demon: 4, theme: 0xcf9dff },
+  { name: "7", speed: 1.3, count: 14, demon: 3, blood: 3, theme: 0x9fd8ff },
+  { name: "8", speed: 1.4, count: 16, demon: 4, blood: 4, theme: 0xffe08a },
+  { name: "9", speed: 1.5, count: 18, demon: 5, blood: 4, bat: 8, theme: 0xff7a6b },
   { name: "10", speed: 1.0, count: 0, boss: true, theme: 0x4b2a68 },
   // ---- Fort of Illusion (after the level-10 finale) ----
-  { name: "11", speed: 2.4, count: 30, demon: 8,  blood: 6,  bat: 10, theme: 0x8f7fd0 },
-  { name: "12", speed: 2.5, count: 32, demon: 9,  blood: 7,  bat: 12, theme: 0x9fb8d8 },
-  { name: "13", speed: 2.6, count: 34, demon: 10, blood: 8,  bat: 14, theme: 0x8fb89a },
-  { name: "14", speed: 2.7, count: 36, demon: 11, blood: 9,  bat: 16, theme: 0xd8b07a },
-  { name: "15", speed: 2.8, count: 38, demon: 12, blood: 10, bat: 18, theme: 0xc98a9a },
+  { name: "11", speed: 1.6, count: 16, demon: 4,  blood: 3,  bat: 6,  theme: 0x8f7fd0 },
+  { name: "12", speed: 1.6, count: 17, demon: 5,  blood: 4,  bat: 7,  theme: 0x9fb8d8 },
+  { name: "13", speed: 1.7, count: 18, demon: 5,  blood: 4,  bat: 8,  theme: 0x8fb89a },
+  { name: "14", speed: 1.8, count: 19, demon: 6,  blood: 5,  bat: 9,  theme: 0xd8b07a },
+  { name: "15", speed: 1.9, count: 20, demon: 6,  blood: 5,  bat: 10, theme: 0xc98a9a },
 ];
 
 function isFortLevel(levelIndex) { return levelIndex >= FORT_START_INDEX; }
@@ -497,14 +497,14 @@ class GameScene extends Phaser.Scene {
       const e = this.enemies.create(x, y, "slime");
       e.body.setSize(26, 26).setOffset(3, 6);
       e.play("slime");
-      e.etype = "slime"; e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 45 * sp;
+      e.etype = "slime"; e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 38 * sp;
       e.setCollideWorldBounds(true);
     };
     const addSkel = (x, y) => {
       const e = this.enemies.create(x, y, "skel-walk");
       e.body.setSize(22, 30).setOffset(5, 2);
       e.play("skel-walk");
-      e.etype = "skel"; e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 60 * sp;
+      e.etype = "skel"; e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 52 * sp;
       e.setCollideWorldBounds(true);
     };
     const addBat = (x, y) => {
@@ -514,14 +514,14 @@ class GameScene extends Phaser.Scene {
       e.body.setAllowGravity(false);
       e.play("bat");
       e.etype = "bat"; e.gfxScale = 0.72; e.baseY = y; e.t = Math.random() * Math.PI * 2;
-      e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 80 * sp;
+      e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 62 * sp;
     };
     const addDemon = (x, y) => {
       const e = this.enemies.create(x, y, "demon-walk");
       e.setScale(0.9);
       e.body.setSize(50, 72).setOffset(25, 24);
       e.play("demon-walk");
-      e.etype = "demon"; e.gfxScale = 0.9; e.attackT = 0; e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 55 * sp;
+      e.etype = "demon"; e.gfxScale = 0.9; e.attackT = 0; e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 46 * sp;
       e.setCollideWorldBounds(true);
     };
     const addBlood = (x, y) => {
@@ -529,7 +529,7 @@ class GameScene extends Phaser.Scene {
       e.setScale(1.0);
       e.body.setSize(64, 84).setOffset(18, 14);
       e.play("blood-walk");
-      e.etype = "blood"; e.gfxScale = 1.0; e.attackT = 0; e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 40 * sp;
+      e.etype = "blood"; e.gfxScale = 1.0; e.attackT = 0; e.dir = Math.random() < 0.5 ? -1 : 1; e.speed = 34 * sp;
       e.setCollideWorldBounds(true);
     };
 
