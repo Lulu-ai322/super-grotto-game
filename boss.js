@@ -28,6 +28,7 @@
 
   // Build the three minotaur animations (called from GameScene)
   GameScene.prototype.createBossAnims = function () {
+    if (isFortLevel(this.levelIndex)) return this.createGolluxAnims();
     const seq = (n, k) => Array.from({ length: n }, (_, i) => ({ key: k + (i + 1) }));
     this.anims.create({ key: "mino-idle", frames: seq(16, "mino-idle-"), frameRate: 6,  repeat: -1 });
     this.anims.create({ key: "mino-walk", frames: seq(12, "mino-walk-"), frameRate: 7,  repeat: -1 });
@@ -36,6 +37,7 @@
 
   // Spawn the boss in its arena
   GameScene.prototype.spawnBoss = function () {
+    if (isFortLevel(this.levelIndex)) return this.spawnGollux();
     const boss = this.enemies.create(this.levelW - 8 * TILE, this.groundTop - 70, "mino-idle-1");
     boss.setScale(BOSS.scale);
     boss.body.setSize(150, 130).setOffset(69, 26);
@@ -59,6 +61,7 @@
 
   /* Boss AI: always chase the player on foot; only swing when close */
   GameScene.prototype.updateBoss = function (e, delta) {
+    if (e.bossKind === "gollux") return this.updateGollux(e, delta);
     const p = this.player;
     if (this.defeatedBoss || this.gameOver || this.won || !p) { e.setVelocityX(0); return; }
 
@@ -131,6 +134,7 @@
 
   // Called from GameScene#hitEnemy when a bullet lands on the boss
   GameScene.prototype.bossHit = function (enemy, ex, ey) {
+    if (enemy.bossKind === "gollux") return this.golluxHit(enemy, ex, ey);
     enemy.bossHp -= 1;
     this.updateBossHud();
     this.floatScore(ex, ey - 20, BOSS.hitBonus);
